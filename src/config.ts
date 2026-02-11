@@ -1,0 +1,103 @@
+export interface FilterConfig {
+  filterLevel: "off" | "light" | "moderate" | "aggressive";
+  maxNodes: number;
+  maxDepth: number;
+  maxSimilarSiblings: number;
+  stripDecorative: boolean;
+  collapseNavigation: boolean;
+  focusMainContent: boolean;
+  networkFilter: {
+    stripResourceTypes: string[];
+    maxRequests: number;
+  };
+  consoleFilter: {
+    stripTypes: string[];
+    maxMessages: number;
+  };
+}
+
+const LIGHT: FilterConfig = {
+  filterLevel: "light",
+  maxNodes: 1000,
+  maxDepth: 20,
+  maxSimilarSiblings: 5,
+  stripDecorative: true,
+  collapseNavigation: false,
+  focusMainContent: false,
+  networkFilter: {
+    stripResourceTypes: ["image", "font"],
+    maxRequests: 200,
+  },
+  consoleFilter: {
+    stripTypes: ["debug", "verbose"],
+    maxMessages: 100,
+  },
+};
+
+const MODERATE: FilterConfig = {
+  filterLevel: "moderate",
+  maxNodes: 500,
+  maxDepth: 15,
+  maxSimilarSiblings: 3,
+  stripDecorative: true,
+  collapseNavigation: true,
+  focusMainContent: false,
+  networkFilter: {
+    stripResourceTypes: ["image", "font", "stylesheet"],
+    maxRequests: 100,
+  },
+  consoleFilter: {
+    stripTypes: ["debug", "verbose", "dir", "dirxml"],
+    maxMessages: 50,
+  },
+};
+
+const AGGRESSIVE: FilterConfig = {
+  filterLevel: "aggressive",
+  maxNodes: 300,
+  maxDepth: 10,
+  maxSimilarSiblings: 2,
+  stripDecorative: true,
+  collapseNavigation: true,
+  focusMainContent: true,
+  networkFilter: {
+    stripResourceTypes: ["image", "font", "stylesheet", "media"],
+    maxRequests: 50,
+  },
+  consoleFilter: {
+    stripTypes: ["debug", "verbose", "dir", "dirxml", "trace"],
+    maxMessages: 30,
+  },
+};
+
+const OFF: FilterConfig = {
+  filterLevel: "off",
+  maxNodes: Infinity,
+  maxDepth: Infinity,
+  maxSimilarSiblings: Infinity,
+  stripDecorative: false,
+  collapseNavigation: false,
+  focusMainContent: false,
+  networkFilter: {
+    stripResourceTypes: [],
+    maxRequests: Infinity,
+  },
+  consoleFilter: {
+    stripTypes: [],
+    maxMessages: Infinity,
+  },
+};
+
+export const PRESETS: Record<FilterConfig["filterLevel"], FilterConfig> = {
+  off: OFF,
+  light: LIGHT,
+  moderate: MODERATE,
+  aggressive: AGGRESSIVE,
+};
+
+export function getConfig(level: string): FilterConfig {
+  if (level in PRESETS) {
+    return PRESETS[level as FilterConfig["filterLevel"]];
+  }
+  return PRESETS.moderate;
+}
