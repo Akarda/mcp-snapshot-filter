@@ -4,6 +4,7 @@ import {
   parseSnapshot,
   serializeSnapshot,
   countNodes,
+  rebuildRawLine,
 } from "../parsers/snapshot-parser.js";
 
 const DECORATIVE_ROLES = new Set([
@@ -11,9 +12,15 @@ const DECORATIVE_ROLES = new Set([
   "presentation",
   "separator",
   "LineBreak",
+  "InlineTextBox",
 ]);
 
-const NAVIGATION_ROLES = new Set([
+const PERIPHERAL_NAVIGATION_ROLES = new Set([
+  "contentinfo",
+  "complementary",
+]);
+
+const ALL_NAVIGATION_ROLES = new Set([
   "navigation",
   "banner",
   "contentinfo",
@@ -35,10 +42,19 @@ export function filterSnapshot(
 
   if (config.stripDecorative) {
     roots = stripDecorativeNodes(roots);
+    roots = collapseRedundantText(roots);
   }
 
-  if (config.collapseNavigation) {
-    roots = collapseNavigationNodes(roots);
+  if (config.collapseSingleChildWrappers) {
+    roots = promoteSingleChildren(roots);
+  }
+
+  if (config.stripAttributes) {
+    roots = stripNoiseAttributes(roots);
+  }
+
+  if (config.navigationCollapseMode !== "off") {
+    roots = collapseNavigationNodes(roots, config.navigationCollapseMode);
   }
 
   if (config.focusMainContent) {
@@ -53,6 +69,8 @@ export function filterSnapshot(
   if (totalBefore > config.maxNodes) {
     roots = capNodeCount(roots, config.maxNodes);
   }
+
+  roots = pruneEmptySubtrees(roots);
 
   return serializeSnapshot(roots);
 }
@@ -101,7 +119,132 @@ function isDecorative(node: SnapshotNode): boolean {
 }
 
 /**
- * 2. Collapse similar siblings: after N consecutive siblings with the same role,
+ * 2. Collapse redundant StaticText children that echo their parent's name.
+ */
+function collapseRedundantText(nodes: SnapshotNode[]): SnapshotNode[] {
+  function process(node: SnapshotNode): SnapshotNode {
+    node.children = node.children.map(process);
+
+    if (node.name) {
+      node.children = node.children.filter((child) => {
+        if (child.role === "StaticText" && child.name === node.name && child.children.length === 0) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    return node;
+  }
+
+  return nodes.map(process);
+}
+
+/**
+ * 3. Promote single-child non-semantic wrappers.
+ *    When generic/group/Section nodes have no name and exactly one child, replace
+ *    the wrapper with the child.
+ */
+const WRAPPER_ROLES = new Set(["generic", "group", "Section"]);
+
+function promoteSingleChildren(nodes: SnapshotNode[]): SnapshotNode[] {
+  function process(node: SnapshotNode): SnapshotNode[] {
+    // Recursively process children first
+    const processedChildren: SnapshotNode[] = [];
+    for (const child of node.children) {
+      processedChildren.push(...process(child));
+    }
+    node.children = processedChildren;
+
+    // Promote if wrapper with no name and exactly one child
+    if (WRAPPER_ROLES.has(node.role) && !node.name && node.children.length === 1) {
+      return node.children;
+    }
+
+    return [node];
+  }
+
+  const result: SnapshotNode[] = [];
+  for (const node of nodes) {
+    result.push(...process(node));
+  }
+  return result;
+}
+
+/**
+ * 4. Strip noise attributes, keeping only semantically useful ones.
+ */
+const KEEP_ATTRIBUTES = new Set([
+  "checked",
+  "expanded",
+  "selected",
+  "required",
+  "disabled",
+  "placeholder",
+  "value",
+  "level",
+  "pressed",
+  "invalid",
+  "haspopup",
+  "modal",
+  "readonly",
+  "url",
+]);
+
+function stripNoiseAttributes(nodes: SnapshotNode[]): SnapshotNode[] {
+  function process(node: SnapshotNode): SnapshotNode {
+    node.children = node.children.map(process);
+
+    if (!node.attributes) return node;
+
+    // Parse key=value or key:"value" pairs from the attributes string
+    const kept: string[] = [];
+    const attrPattern = /(\w+)(?:=("[^"]*"|\S+)|:"([^"]*)")?/g;
+    let match;
+    while ((match = attrPattern.exec(node.attributes)) !== null) {
+      const key = match[1];
+      if (KEEP_ATTRIBUTES.has(key)) {
+        kept.push(match[0]);
+      }
+    }
+
+    node.attributes = kept.join(" ");
+    node.rawLine = rebuildRawLine(node);
+
+    return node;
+  }
+
+  return nodes.map(process);
+}
+
+/**
+ * Final cleanup: prune empty subtrees (no uid, no name, no attributes, no children).
+ */
+function pruneEmptySubtrees(nodes: SnapshotNode[]): SnapshotNode[] {
+  function process(node: SnapshotNode): SnapshotNode | null {
+    node.children = nodes_filter(node.children);
+
+    // Keep if it has any meaningful content
+    if (node.uid || node.name || node.attributes || node.children.length > 0) {
+      return node;
+    }
+    return null;
+  }
+
+  function nodes_filter(nodeList: SnapshotNode[]): SnapshotNode[] {
+    const result: SnapshotNode[] = [];
+    for (const node of nodeList) {
+      const processed = process(node);
+      if (processed) result.push(processed);
+    }
+    return result;
+  }
+
+  return nodes_filter(nodes);
+}
+
+/**
+ * 5. Collapse similar siblings: after N consecutive siblings with the same role,
  *    keep first N and insert a summary placeholder.
  */
 function collapseSimilarSiblings(
@@ -167,9 +310,11 @@ function collapseSimilarSiblings(
 /**
  * 3. Collapse navigation subtrees to single summary lines.
  */
-function collapseNavigationNodes(nodes: SnapshotNode[]): SnapshotNode[] {
+function collapseNavigationNodes(nodes: SnapshotNode[], mode: "peripheral" | "all"): SnapshotNode[] {
+  const roles = mode === "all" ? ALL_NAVIGATION_ROLES : PERIPHERAL_NAVIGATION_ROLES;
+
   function process(node: SnapshotNode): SnapshotNode {
-    if (NAVIGATION_ROLES.has(node.role) && node.children.length > 0) {
+    if (roles.has(node.role) && node.children.length > 0) {
       const childCount = countNodes([node]) - 1;
       const linkCount = countByRole(node.children, "link");
       const summary = node.name

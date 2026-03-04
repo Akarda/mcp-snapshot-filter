@@ -4,8 +4,14 @@ export interface FilterConfig {
   maxDepth: number;
   maxSimilarSiblings: number;
   stripDecorative: boolean;
-  collapseNavigation: boolean;
+  navigationCollapseMode: "off" | "peripheral" | "all";
   focusMainContent: boolean;
+  evaluateFilter: {
+    maxJsonArrayItems: number;
+    maxTextLength: number;
+  };
+  collapseSingleChildWrappers: boolean;
+  stripAttributes: boolean;
   networkFilter: {
     stripResourceTypes: string[];
     maxRequests: number;
@@ -22,8 +28,10 @@ const LIGHT: FilterConfig = {
   maxDepth: 20,
   maxSimilarSiblings: 5,
   stripDecorative: true,
-  collapseNavigation: false,
+  navigationCollapseMode: "off",
   focusMainContent: false,
+  collapseSingleChildWrappers: false,
+  stripAttributes: false,
   networkFilter: {
     stripResourceTypes: ["image", "font"],
     maxRequests: 200,
@@ -31,6 +39,10 @@ const LIGHT: FilterConfig = {
   consoleFilter: {
     stripTypes: ["debug", "verbose"],
     maxMessages: 100,
+  },
+  evaluateFilter: {
+    maxJsonArrayItems: 100,
+    maxTextLength: 100_000,
   },
 };
 
@@ -40,8 +52,10 @@ const MODERATE: FilterConfig = {
   maxDepth: 15,
   maxSimilarSiblings: 3,
   stripDecorative: true,
-  collapseNavigation: true,
+  navigationCollapseMode: "peripheral",
   focusMainContent: false,
+  collapseSingleChildWrappers: true,
+  stripAttributes: true,
   networkFilter: {
     stripResourceTypes: ["image", "font", "stylesheet"],
     maxRequests: 100,
@@ -49,6 +63,10 @@ const MODERATE: FilterConfig = {
   consoleFilter: {
     stripTypes: ["debug", "verbose", "dir", "dirxml"],
     maxMessages: 50,
+  },
+  evaluateFilter: {
+    maxJsonArrayItems: 30,
+    maxTextLength: 50_000,
   },
 };
 
@@ -58,8 +76,10 @@ const AGGRESSIVE: FilterConfig = {
   maxDepth: 10,
   maxSimilarSiblings: 2,
   stripDecorative: true,
-  collapseNavigation: true,
+  navigationCollapseMode: "all",
   focusMainContent: true,
+  collapseSingleChildWrappers: true,
+  stripAttributes: true,
   networkFilter: {
     stripResourceTypes: ["image", "font", "stylesheet", "media"],
     maxRequests: 50,
@@ -67,6 +87,10 @@ const AGGRESSIVE: FilterConfig = {
   consoleFilter: {
     stripTypes: ["debug", "verbose", "dir", "dirxml", "trace"],
     maxMessages: 30,
+  },
+  evaluateFilter: {
+    maxJsonArrayItems: 10,
+    maxTextLength: 20_000,
   },
 };
 
@@ -76,8 +100,10 @@ const OFF: FilterConfig = {
   maxDepth: Infinity,
   maxSimilarSiblings: Infinity,
   stripDecorative: false,
-  collapseNavigation: false,
+  navigationCollapseMode: "off",
   focusMainContent: false,
+  collapseSingleChildWrappers: false,
+  stripAttributes: false,
   networkFilter: {
     stripResourceTypes: [],
     maxRequests: Infinity,
@@ -85,6 +111,10 @@ const OFF: FilterConfig = {
   consoleFilter: {
     stripTypes: [],
     maxMessages: Infinity,
+  },
+  evaluateFilter: {
+    maxJsonArrayItems: Infinity,
+    maxTextLength: Infinity,
   },
 };
 

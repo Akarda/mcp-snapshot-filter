@@ -8,6 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { FilterConfig } from "./config.js";
 import { filterResponseText } from "./filters/index.js";
+import { filterEvaluateScript } from "./filters/evaluate-filter.js";
 
 /** Tools whose responses should be filtered */
 const FILTERABLE_TOOLS = new Set([
@@ -24,6 +25,7 @@ const FILTERABLE_TOOLS = new Set([
   "upload_file",
   "select_page",
   "wait_for",
+  "evaluate_script",
 ]);
 
 export interface ProxyOptions {
@@ -97,7 +99,9 @@ export async function startProxy(options: ProxyOptions): Promise<void> {
       const filteredContent = (result.content as ContentBlock[]).map((block) => {
         if (block.type === "text" && typeof block.text === "string") {
           const originalLen = block.text.length;
-          const filtered = filterResponseText(block.text, config);
+          const filtered = toolName === "evaluate_script"
+            ? filterEvaluateScript(block.text, config)
+            : filterResponseText(block.text, config);
           const filteredLen = filtered.length;
           const saved = originalLen - filteredLen;
 
