@@ -18,6 +18,7 @@ const FILTERABLE_TOOLS = new Set([
   "fill_form",
   "hover",
   "press_key",
+  "type_text",
   "navigate_page",
   "list_network_requests",
   "list_console_messages",
@@ -26,6 +27,13 @@ const FILTERABLE_TOOLS = new Set([
   "select_page",
   "wait_for",
   "evaluate_script",
+  "take_memory_snapshot",
+]);
+
+/** Tools whose responses get evaluate_script-style truncation (large JSON/text) */
+const TRUNCATABLE_TOOLS = new Set([
+  "evaluate_script",
+  "take_memory_snapshot",
 ]);
 
 export interface ProxyOptions {
@@ -99,7 +107,7 @@ export async function startProxy(options: ProxyOptions): Promise<void> {
       const filteredContent = (result.content as ContentBlock[]).map((block) => {
         if (block.type === "text" && typeof block.text === "string") {
           const originalLen = block.text.length;
-          const filtered = toolName === "evaluate_script"
+          const filtered = TRUNCATABLE_TOOLS.has(toolName)
             ? filterEvaluateScript(block.text, config)
             : filterResponseText(block.text, config);
           const filteredLen = filtered.length;

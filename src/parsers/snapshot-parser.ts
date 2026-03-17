@@ -106,6 +106,18 @@ export function countNodes(nodes: SnapshotNode[]): number {
 }
 
 /**
+ * Rebuild rawLine from node fields (used after attribute stripping).
+ */
+export function rebuildRawLine(node: SnapshotNode): string {
+  let line = "";
+  if (node.uid) line += `uid=${node.uid} `;
+  line += node.role;
+  if (node.name) line += ` "${node.name}"`;
+  if (node.attributes) line += ` ${node.attributes}`;
+  return line;
+}
+
+/**
  * Collect all UIDs from a tree.
  */
 export function collectUids(nodes: SnapshotNode[]): Set<string> {

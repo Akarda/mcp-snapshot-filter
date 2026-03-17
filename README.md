@@ -76,13 +76,19 @@ Strips `image`, `font`, `stylesheet` (and `media` in aggressive) entries from `l
 ### Console message filtering
 Strips `debug`, `verbose` (and `dir`, `trace` at higher levels) from `list_console_messages`. Error and warning messages are always preserved.
 
+### Evaluate script & memory snapshot filtering
+Large responses from `evaluate_script` and `take_memory_snapshot` are truncated:
+- **JSON arrays** — kept to first N items (100/30/10 depending on level)
+- **HTML dumps** — truncated at max text length
+- **Plain text** — truncated at max text length (100KB/50KB/20KB depending on level)
+
 ## What Is NOT Filtered
 
 - **Error responses** — always passed through raw
 - **Image content blocks** — screenshots etc. are never touched
 - **Unknown/new tools** — only explicitly listed tools get filtered, everything else passes through
 - **Individual request/message details** — `get_network_request`, `get_console_message` are unfiltered
-- **Non-snapshot tools** — `evaluate_script`, `emulate`, `performance_*`, etc. pass through as-is
+- **Non-interactive tools** — `emulate`, `performance_*`, `screencast_*`, etc. pass through as-is
 
 ## UID Integrity
 
@@ -103,6 +109,10 @@ The proxy uses the MCP SDK's low-level `Server` class (not `McpServer`) to avoid
 2. Discovers all upstream tools via `listTools()`
 3. Re-exposes them via `setRequestHandler(ListToolsRequestSchema)` and `setRequestHandler(CallToolRequestSchema)`
 4. For calls to content-heavy tools, parses the response text into markdown sections (`## Latest page snapshot`, etc.), applies the appropriate filter to each section, and returns the filtered result
+
+## Compatibility with `--slim` mode
+
+chrome-devtools-mcp supports a `--slim` flag that reduces the server to just 3 tools (`navigate`, `evaluate`, `screenshot`) for maximum token savings (~368 tokens). If the proxy detects `--slim` in the upstream args, it will warn that filtering has no effect — slim mode responses are already minimal. The proxy is designed for full mode where it preserves all tools while reducing response sizes by 40-60%.
 
 ## Development
 

@@ -1,0 +1,64 @@
+## Page info
+- URL: https://app.example.com/orders
+- Title: Orders | ExampleApp
+
+## Latest page snapshot
+
+uid=1 RootWebArea "Orders | ExampleApp"
+  uid=2 banner "Header"
+    [banner: Header (16 items, 6 links)]
+  uid=28 main "Main Content"
+    uid=29 heading "Orders" level=1
+    uid=32 search "Filter orders"
+      uid=33 textbox "Search orders..."
+      uid=34 button "Search"
+    uid=37 button "Export CSV"
+    uid=38 button "New Order"
+    uid=40 table "Orders Table"
+      uid=41 rowgroup ""
+        uid=42 row ""
+          uid=43 columnheader "Order ID"
+          uid=44 columnheader "Customer"
+          uid=45 columnheader "Status"
+          ... [3 more columnheader elements collapsed]
+      uid=49 rowgroup ""
+        uid=50 row ""
+          uid=51 cell "#10234"
+          uid=52 cell "Alice Johnson"
+          uid=53 cell "Shipped"
+          ... [3 more cell elements collapsed]
+        uid=59 row ""
+          uid=60 cell "#10233"
+          uid=61 cell "Bob Smith"
+          uid=62 cell "Processing"
+          ... [3 more cell elements collapsed]
+        uid=68 row ""
+          uid=69 cell "#10232"
+          uid=70 cell "Carol Williams"
+          uid=71 cell "Delivered"
+          ... [3 more cell elements collapsed]
+        ... [5 more row elements collapsed]
+    uid=123 navigation "Pagination"
+      [navigation: Pagination (5 items, 0 links)]
+  uid=129 contentinfo "Footer"
+    [contentinfo: Footer (7 items, 3 links)]
+
+## Network requests
+
+reqid=1 GET 200 document https://app.example.com/orders
+reqid=4 GET 200 script https://app.example.com/assets/app.js
+reqid=5 GET 200 script https://app.example.com/assets/vendor.js
+reqid=11 GET 200 fetch https://api.example.com/v1/orders?page=1&limit=25
+reqid=13 GET 200 fetch https://api.example.com/v1/user/profile
+reqid=15 GET 200 fetch https://api.example.com/v1/notifications
+
+[Filtered out 9 requests: 2 stylesheet, 3 font, 4 image]
+
+## Console messages
+
+msgid=1 log "App initialized"
+msgid=5 log "Orders loaded: 25 results"
+msgid=10 warning "Deprecation: moment.js will be removed in v3.0"
+
+[Filtered out 9 console messages (types: debug, verbose, dir, dirxml)]
+

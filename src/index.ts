@@ -53,6 +53,15 @@ async function main(): Promise<void> {
   );
   const config = getConfig(filterLevel);
 
+  // Warn if upstream is running in --slim mode (proxy adds no value there)
+  if (upstreamArgs.some((a) => a === "--slim" || a.startsWith("--slim="))) {
+    process.stderr.write(
+      `[cdp-filter-proxy] Warning: upstream is running in --slim mode. ` +
+        `The proxy has no effect in slim mode since it only exposes 3 tools ` +
+        `(navigate, evaluate, screenshot) with minimal responses.\n`
+    );
+  }
+
   process.stderr.write(
     `[cdp-filter-proxy] Starting with filter level: ${config.filterLevel}\n`
   );

@@ -1,0 +1,217 @@
+--- examples/demo-diff-raw.txt	2026-03-03 12:48:16
++++ examples/demo-diff-filtered.txt	2026-03-03 12:48:45
+@@ -3,173 +3,62 @@
+ - Title: Orders | ExampleApp
+ 
+ ## Latest page snapshot
++
+ uid=1 RootWebArea "Orders | ExampleApp"
+   uid=2 banner "Header"
+-    uid=3 navigation "Main Nav"
+-      uid=4 link "Home"
+-        uid=5 generic ""
+-          uid=6 StaticText "Home"
+-      uid=7 link "Orders"
+-        uid=8 generic ""
+-          uid=9 StaticText "Orders"
+-      uid=10 link "Customers"
+-        uid=11 generic ""
+-          uid=12 StaticText "Customers"
+-      uid=13 link "Products"
+-        uid=14 generic ""
+-          uid=15 StaticText "Products"
+-      uid=16 link "Analytics"
+-        uid=17 generic ""
+-          uid=18 StaticText "Analytics"
+-      uid=19 link "Settings"
+-        uid=20 generic ""
+-          uid=21 StaticText "Settings"
+-    uid=22 separator ""
+-    uid=23 generic ""
+-      uid=24 generic ""
+-        uid=25 button "Profile"
+-          uid=26 image "Avatar"
+-          uid=27 StaticText "John D."
++    [banner: Header (16 items, 6 links)]
+   uid=28 main "Main Content"
+     uid=29 heading "Orders" level=1
+-    uid=30 generic ""
+-      uid=31 generic ""
+-        uid=32 search "Filter orders"
+-          uid=33 textbox "Search orders..."
+-          uid=34 button "Search"
+-        uid=35 separator ""
+-        uid=36 generic ""
+-          uid=37 button "Export CSV"
+-          uid=38 button "New Order"
+-    uid=39 none ""
+-      uid=40 table "Orders Table"
+-        uid=41 rowgroup ""
+-          uid=42 row ""
+-            uid=43 columnheader "Order ID"
+-            uid=44 columnheader "Customer"
+-            uid=45 columnheader "Status"
+-            uid=46 columnheader "Total"
+-            uid=47 columnheader "Date"
+-            uid=48 columnheader "Actions"
+-        uid=49 rowgroup ""
+-          uid=50 row ""
+-            uid=51 cell "#10234"
+-            uid=52 cell "Alice Johnson"
+-            uid=53 cell "Shipped"
+-            uid=54 cell "$129.99"
+-            uid=55 cell "2026-02-28"
+-            uid=56 cell ""
+-              uid=57 button "View"
+-              uid=58 button "Edit"
+-          uid=59 row ""
+-            uid=60 cell "#10233"
+-            uid=61 cell "Bob Smith"
+-            uid=62 cell "Processing"
+-            uid=63 cell "$89.50"
+-            uid=64 cell "2026-02-28"
+-            uid=65 cell ""
+-              uid=66 button "View"
+-              uid=67 button "Edit"
+-          uid=68 row ""
+-            uid=69 cell "#10232"
+-            uid=70 cell "Carol Williams"
+-            uid=71 cell "Delivered"
+-            uid=72 cell "$249.00"
+-            uid=73 cell "2026-02-27"
+-            uid=74 cell ""
+-              uid=75 button "View"
+-              uid=76 button "Edit"
+-          uid=77 row ""
+-            uid=78 cell "#10231"
+-            uid=79 cell "David Brown"
+-            uid=80 cell "Shipped"
+-            uid=81 cell "$67.25"
+-            uid=82 cell "2026-02-27"
+-            uid=83 cell ""
+-              uid=84 button "View"
+-              uid=85 button "Edit"
+-          uid=86 row ""
+-            uid=87 cell "#10230"
+-            uid=88 cell "Eve Davis"
+-            uid=89 cell "Pending"
+-            uid=90 cell "$312.00"
+-            uid=91 cell "2026-02-26"
+-            uid=92 cell ""
+-              uid=93 button "View"
+-              uid=94 button "Edit"
+-          uid=95 row ""
+-            uid=96 cell "#10229"
+-            uid=97 cell "Frank Miller"
+-            uid=98 cell "Cancelled"
+-            uid=99 cell "$45.00"
+-            uid=100 cell "2026-02-26"
+-            uid=101 cell ""
+-              uid=102 button "View"
+-              uid=103 button "Edit"
+-          uid=104 row ""
+-            uid=105 cell "#10228"
+-            uid=106 cell "Grace Wilson"
+-            uid=107 cell "Delivered"
+-            uid=108 cell "$178.50"
+-            uid=109 cell "2026-02-25"
+-            uid=110 cell ""
+-              uid=111 button "View"
+-              uid=112 button "Edit"
+-          uid=113 row ""
+-            uid=114 cell "#10227"
+-            uid=115 cell "Henry Taylor"
+-            uid=116 cell "Shipped"
+-            uid=117 cell "$92.75"
+-            uid=118 cell "2026-02-25"
+-            uid=119 cell ""
+-              uid=120 button "View"
+-              uid=121 button "Edit"
+-    uid=122 none ""
+-      uid=123 navigation "Pagination"
+-        uid=124 button "Previous"
+-        uid=125 button "1"
+-        uid=126 button "2"
+-        uid=127 button "3"
+-        uid=128 button "Next"
++    uid=32 search "Filter orders"
++      uid=33 textbox "Search orders..."
++      uid=34 button "Search"
++    uid=37 button "Export CSV"
++    uid=38 button "New Order"
++    uid=40 table "Orders Table"
++      uid=41 rowgroup ""
++        uid=42 row ""
++          uid=43 columnheader "Order ID"
++          uid=44 columnheader "Customer"
++          uid=45 columnheader "Status"
++          ... [3 more columnheader elements collapsed]
++      uid=49 rowgroup ""
++        uid=50 row ""
++          uid=51 cell "#10234"
++          uid=52 cell "Alice Johnson"
++          uid=53 cell "Shipped"
++          ... [3 more cell elements collapsed]
++        uid=59 row ""
++          uid=60 cell "#10233"
++          uid=61 cell "Bob Smith"
++          uid=62 cell "Processing"
++          ... [3 more cell elements collapsed]
++        uid=68 row ""
++          uid=69 cell "#10232"
++          uid=70 cell "Carol Williams"
++          uid=71 cell "Delivered"
++          ... [3 more cell elements collapsed]
++        ... [5 more row elements collapsed]
++    uid=123 navigation "Pagination"
++      [navigation: Pagination (5 items, 0 links)]
+   uid=129 contentinfo "Footer"
+-    uid=130 none ""
+-      uid=131 generic ""
+-        uid=132 link "Terms"
+-          uid=133 StaticText "Terms"
+-        uid=134 link "Privacy"
+-          uid=135 StaticText "Privacy"
+-        uid=136 link "Help"
+-          uid=137 StaticText "Help"
+-        uid=138 presentation ""
+-        uid=139 StaticText "  2026 ExampleApp Inc."
++    [contentinfo: Footer (7 items, 3 links)]
+ 
+ ## Network requests
++
+ reqid=1 GET 200 document https://app.example.com/orders
+-reqid=2 GET 200 stylesheet https://app.example.com/assets/main.css
+-reqid=3 GET 200 stylesheet https://app.example.com/assets/vendor.css
+ reqid=4 GET 200 script https://app.example.com/assets/app.js
+ reqid=5 GET 200 script https://app.example.com/assets/vendor.js
+-reqid=6 GET 200 font https://fonts.gstatic.com/roboto-v30.woff2
+-reqid=7 GET 200 font https://fonts.gstatic.com/roboto-bold-v30.woff2
+-reqid=8 GET 200 font https://fonts.gstatic.com/icons-v14.woff2
+-reqid=9 GET 200 image https://app.example.com/assets/logo.svg
+-reqid=10 GET 200 image https://app.example.com/avatars/john-d.jpg
+ reqid=11 GET 200 fetch https://api.example.com/v1/orders?page=1&limit=25
+-reqid=12 GET 200 image https://app.example.com/assets/favicon.ico
+ reqid=13 GET 200 fetch https://api.example.com/v1/user/profile
+-reqid=14 GET 200 image https://app.example.com/assets/empty-state.png
+ reqid=15 GET 200 fetch https://api.example.com/v1/notifications
+ 
++[Filtered out 9 requests: 2 stylesheet, 3 font, 4 image]
++
+ ## Console messages
++
+ msgid=1 log "App initialized"
+-msgid=2 debug "Router: navigating to /orders"
+-msgid=3 debug "Auth: token valid, expires in 3600s"
+-msgid=4 debug "API: GET /v1/orders?page=1&limit=25"
+ msgid=5 log "Orders loaded: 25 results"
+-msgid=6 debug "Render: OrdersTable mounted"
+-msgid=7 debug "Render: Pagination mounted"
+-msgid=8 verbose "Performance: orders fetch 234ms"
+-msgid=9 verbose "Performance: DOM render 89ms"
+ msgid=10 warning "Deprecation: moment.js will be removed in v3.0"
+-msgid=11 debug "Analytics: page_view event sent"
+-msgid=12 debug "WebSocket: connected to wss://realtime.example.com"
++
++[Filtered out 9 console messages (types: debug, verbose, dir, dirxml)]
++

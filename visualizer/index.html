@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CDP Filter Proxy — Visualizer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #c9d1d9; height: 100vh; display: flex; flex-direction: column; }
+
+  /* Top bar */
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #161b22; border-bottom: 1px solid #30363d; flex-shrink: 0; }
+  .topbar h1 { font-size: 14px; font-weight: 600; color: #58a6ff; white-space: nowrap; }
+  .tab-select { flex: 1; max-width: 500px; padding: 8px 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 13px; text-overflow: ellipsis; }
+  .tab-select option { background: #0d1117; }
+  .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+  .btn-primary { background: #238636; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-primary:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+  .btn-secondary { background: #30363d; color: #c9d1d9; }
+  .btn-secondary:hover { background: #3d444d; }
+  .topbar-mode-toggle { display: flex; gap: 2px; background: #21262d; border-radius: 6px; padding: 2px; }
+  .topbar-mode-btn { padding: 6px 14px; border: none; border-radius: 4px; background: transparent; color: #8b949e; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .topbar-mode-btn.active { background: #30363d; color: #c9d1d9; }
+  .topbar-mode-btn:hover:not(.active) { color: #c9d1d9; }
+
+  /* Eval bar */
+  .evalbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #0d1117; border-bottom: 1px solid #30363d; flex-shrink: 0; }
+  .evalbar label { font-size: 12px; color: #8b949e; white-space: nowrap; }
+  .eval-input { flex: 1; padding: 6px 10px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 13px; font-family: 'SF Mono', monospace; resize: vertical; min-height: 32px; max-height: 120px; line-height: 1.4; }
+  .eval-input:focus { outline: none; border-color: #58a6ff; }
+
+  /* URL bar */
+  .urlbar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #0d1117; border-bottom: 1px solid #30363d; flex-shrink: 0; }
+  .urlbar label { font-size: 12px; color: #8b949e; white-space: nowrap; }
+  .url-input { flex: 1; padding: 6px 10px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 13px; font-family: 'SF Mono', monospace; }
+  .url-input:focus { outline: none; border-color: #58a6ff; }
+
+  /* Stats bar */
+  .statsbar { display: flex; align-items: center; gap: 16px; padding: 8px 16px; background: #161b22; border-bottom: 1px solid #30363d; font-size: 13px; flex-shrink: 0; }
+  .stat { display: flex; align-items: center; gap: 6px; }
+  .stat-label { color: #8b949e; }
+  .stat-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat-value.green { color: #3fb950; }
+  .stat-value.red { color: #f85149; }
+  .stat-value.blue { color: #58a6ff; }
+  .statsbar-toggles { display: flex; gap: 10px; margin-left: auto; align-items: center; }
+  .toggle-group { display: flex; gap: 2px; background: #21262d; border-radius: 6px; padding: 2px; }
+  .toggle-group-label { font-size: 11px; color: #484f58; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; align-self: center; }
+  .filter-btn, .mode-btn { padding: 4px 12px; border: none; border-radius: 4px; background: transparent; color: #8b949e; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .filter-btn.active, .mode-btn.active { background: #30363d; color: #c9d1d9; }
+  .filter-btn:hover:not(.active), .mode-btn:hover:not(.active) { color: #c9d1d9; }
+  .mode-btn .mode-icon { margin-right: 3px; font-style: normal; }
+
+  /* Panels */
+  .panels { display: flex; flex: 1; overflow: hidden; }
+  .panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .panel + .panel { border-left: 1px solid #30363d; }
+  .panel-header { padding: 8px 16px; background: #161b22; border-bottom: 1px solid #30363d; font-size: 12px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .panel-header .char-count { color: #484f58; font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .panel-content { flex: 1; overflow: auto; padding: 12px 0; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 12px; line-height: 1.6; white-space: pre; }
+  .panel-content.visual { padding: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 13px; white-space: normal; }
+  .panel-content.hidden { display: none; }
+  .panel-content::-webkit-scrollbar { width: 8px; height: 8px; }
+  .panel-content::-webkit-scrollbar-track { background: transparent; }
+  .panel-content::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+
+  /* Snapshot lines */
+  .line { padding: 0 16px; min-height: 19px; }
+  .line.removed { background: rgba(248, 81, 73, 0.1); text-decoration: line-through; color: #f8514973; }
+  .line.added { background: rgba(63, 185, 80, 0.08); }
+  .line.collapsed { color: #d29922; font-style: italic; }
+  .line .role { color: #d2a8ff; }
+  .line .uid { color: #484f58; }
+  .line .name { color: #a5d6ff; }
+  .line .section-header { color: #58a6ff; font-weight: 600; }
+  .line .filter-note { color: #d29922; font-style: italic; }
+
+  /* Visual wireframe styles */
+  .vis-RootWebArea { border: 1px solid #30363d; border-radius: 6px; padding: 12px; min-height: 100px; background: #0d1117; }
+  .vis-heading { font-weight: 700; color: #e6edf3; margin: 8px 0 4px; }
+  .vis-heading[data-level="1"] { font-size: 22px; }
+  .vis-heading[data-level="2"] { font-size: 18px; }
+  .vis-heading[data-level="3"] { font-size: 15px; }
+  .vis-heading[data-level="4"], .vis-heading[data-level="5"], .vis-heading[data-level="6"] { font-size: 13px; }
+  .vis-navigation, .vis-banner { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #21262d; border-radius: 4px; padding: 6px 12px; margin: 6px 0; color: #8b949e; font-size: 12px; }
+  .vis-navigation::before { content: 'nav'; font-size: 10px; text-transform: uppercase; color: #484f58; letter-spacing: 0.5px; margin-right: 4px; }
+  .vis-banner::before { content: 'banner'; font-size: 10px; text-transform: uppercase; color: #484f58; letter-spacing: 0.5px; margin-right: 4px; }
+  .vis-main { padding: 8px 0 8px 12px; border-left: 2px solid #30363d; margin: 8px 0; }
+  .vis-contentinfo { background: #161b22; border-radius: 4px; padding: 6px 12px; margin-top: 8px; font-size: 11px; color: #8b949e; }
+  .vis-contentinfo::before { content: 'footer'; font-size: 10px; text-transform: uppercase; color: #484f58; letter-spacing: 0.5px; margin-right: 6px; }
+  .vis-table { display: table; width: 100%; border-collapse: collapse; border: 1px solid #30363d; border-radius: 4px; margin: 6px 0; font-size: 12px; }
+  .vis-row, .vis-rowgroup { display: table-row; }
+  .vis-rowgroup { display: table-row-group; }
+  .vis-cell, .vis-columnheader, .vis-gridcell, .vis-rowheader { display: table-cell; border: 1px solid #30363d; padding: 4px 8px; color: #c9d1d9; }
+  .vis-columnheader, .vis-rowheader { font-weight: 700; background: #161b22; color: #e6edf3; }
+  .vis-link { color: #58a6ff; text-decoration: underline; cursor: default; display: inline; margin: 0 2px; }
+  .vis-button { display: inline-block; border: 1px solid #30363d; border-radius: 6px; padding: 3px 10px; margin: 2px 4px 2px 0; color: #c9d1d9; background: #21262d; font-size: 12px; cursor: default; }
+  .vis-textbox, .vis-searchbox { display: inline-block; border: 1px solid #30363d; border-radius: 4px; padding: 4px 8px; margin: 2px 0; background: #0d1117; color: #484f58; min-width: 120px; font-size: 12px; }
+  .vis-textbox::before { content: attr(data-placeholder); }
+  .vis-searchbox::before { content: attr(data-placeholder); }
+  .vis-paragraph { color: #c9d1d9; margin: 2px 0; line-height: 1.5; }
+  .vis-StaticText { color: #c9d1d9; line-height: 1.5; }
+  .vis-list { list-style: disc; padding-left: 20px; margin: 4px 0; }
+  .vis-listitem { color: #c9d1d9; margin: 2px 0; }
+  .vis-image { display: inline-block; background: #21262d; border: 1px dashed #30363d; border-radius: 4px; padding: 8px 12px; margin: 4px 0; color: #8b949e; font-size: 11px; min-width: 40px; min-height: 24px; }
+  .vis-image::before { content: '\1f5bc '; }
+  .vis-collapsed { border: 1px dashed #d29922; border-radius: 4px; padding: 4px 10px; margin: 4px 0; color: #d29922; font-style: italic; background: rgba(210, 153, 34, 0.06); font-size: 12px; }
+  .vis-generic { margin: 2px 0; }
+  .vis-separator { border-top: 1px solid #30363d; margin: 4px 0; }
+  .vis-group, .vis-region, .vis-complementary, .vis-article, .vis-section, .vis-form { margin: 4px 0; padding: 2px 0; }
+  .vis-combobox, .vis-spinbutton { display: inline-block; border: 1px solid #30363d; border-radius: 4px; padding: 4px 8px; margin: 2px 0; background: #0d1117; color: #484f58; min-width: 80px; font-size: 12px; }
+  .vis-checkbox, .vis-radio { display: inline-flex; align-items: center; gap: 4px; margin: 2px 4px 2px 0; }
+  .vis-checkbox::before { content: '\2610'; }
+  .vis-radio::before { content: '\25CB'; }
+  .vis-tab { display: inline-block; padding: 4px 10px; border-bottom: 2px solid transparent; color: #8b949e; font-size: 12px; margin: 0 2px; }
+  .vis-tablist { display: flex; gap: 0; border-bottom: 1px solid #30363d; margin: 4px 0; }
+  .vis-dialog { border: 1px solid #30363d; border-radius: 8px; padding: 12px; margin: 8px 0; background: #161b22; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .vis-tooltip { display: inline-block; background: #30363d; color: #c9d1d9; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
+  .vis-node-highlight { outline: 2px solid #58a6ff; outline-offset: 1px; }
+
+  /* Info panel */
+  .info-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #30363d; background: transparent; color: #8b949e; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .info-btn:hover, .info-btn.active { background: #30363d; color: #c9d1d9; border-color: #58a6ff; }
+  .info-panel { display: none; background: #161b22; border-bottom: 1px solid #30363d; overflow: hidden; }
+  .info-panel.open { display: block; }
+  .info-inner { max-width: 900px; margin: 0 auto; padding: 20px 24px 24px; }
+  .info-inner h2 { font-size: 15px; color: #e6edf3; margin-bottom: 12px; font-weight: 600; }
+  .info-inner h3 { font-size: 13px; color: #c9d1d9; margin: 14px 0 6px; font-weight: 600; }
+  .info-inner p { font-size: 13px; color: #8b949e; line-height: 1.7; margin: 4px 0; }
+  .info-inner code { background: #21262d; padding: 1px 6px; border-radius: 3px; font-size: 12px; color: #c9d1d9; font-family: 'SF Mono', monospace; }
+  .info-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 12px; }
+  .info-card { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 14px 16px; }
+  .info-card h4 { font-size: 12px; color: #58a6ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .info-card ul { list-style: none; font-size: 12px; color: #8b949e; line-height: 1.8; }
+  .info-card li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  .info-card.card-yes li::before { background: #3fb950; }
+  .info-card.card-no li::before { background: #f85149; }
+  @media (max-width: 700px) { .info-columns { grid-template-columns: 1fr; } }
+
+  /* Empty state */
+  .empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #484f58; font-size: 14px; flex-direction: column; gap: 8px; }
+  .empty .icon { font-size: 48px; opacity: 0.3; }
+
+  /* Loading */
+  .loading .btn-primary { position: relative; color: transparent; }
+  .loading .btn-primary::after { content: ''; position: absolute; width: 16px; height: 16px; top: 50%; left: 50%; margin: -8px 0 0 -8px; border: 2px solid transparent; border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error */
+  .error-banner { padding: 12px 16px; background: rgba(248, 81, 73, 0.1); border-bottom: 1px solid #f8514940; color: #f85149; font-size: 13px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>CDP Filter Visualizer</h1>
+  <div class="topbar-mode-toggle" id="appModeToggle">
+    <button class="topbar-mode-btn active" data-appmode="snapshot">Snapshot</button>
+    <button class="topbar-mode-btn" data-appmode="evaluate">Evaluate</button>
+  </div>
+  <select class="tab-select" id="tabSelect">
+    <option value="">Loading tabs...</option>
+  </select>
+  <button class="btn btn-secondary" id="refreshBtn" title="Refresh tab list">&#8635;</button>
+  <button class="btn btn-primary" id="captureBtn" disabled>Capture Snapshot</button>
+  <button class="btn btn-primary" id="executeBtn" disabled style="display:none">Execute</button>
+  <button class="info-btn" id="infoBtn" title="How AI reads accessibility snapshots">?</button>
+</div>
+
+<div class="info-panel" id="infoPanel">
+  <div class="info-inner">
+    <h2>How AI Models Interpret Accessibility Snapshots</h2>
+    <p>When an AI model receives a page snapshot, it doesn't see pixels — it sees the <strong>accessibility tree</strong>: a structured text representation of every semantic element on the page. From this text, the model reconstructs a mental model of the page layout and content.</p>
+
+    <h3>From text to understanding</h3>
+    <p>The model uses <strong>roles as a blueprint</strong> — <code>navigation</code>, <code>main</code>, <code>heading</code>, <code>table</code>, <code>button</code> map directly to well-known UI patterns. A <code>navigation</code> with <code>link</code> children means a nav bar. A <code>table</code> with <code>columnheader</code> and <code>row</code> children means a data grid.</p>
+    <p><strong>Hierarchy implies layout</strong> — indentation and parent-child nesting tell the model spatial relationships. Children of <code>main</code> are the page content area. Children of <code>navigation</code> are nav items.</p>
+    <p><strong>Names and values provide content</strong> — accessible names like <code>"Dashboard"</code>, <code>"Submit"</code>, <code>"Status"</code> tell the model what the user sees as text on each element.</p>
+    <p><strong>Common patterns are recognized</strong> — a <code>banner</code> at the top + <code>main</code> in the middle + <code>contentinfo</code> at the bottom is a standard page layout. A <code>searchbox</code> near a <code>table</code> implies a filter/search UI.</p>
+
+    <div class="info-columns">
+      <div class="info-card card-yes">
+        <h4>What the AI can understand</h4>
+        <ul>
+          <li>Page structure and element hierarchy</li>
+          <li>Semantic meaning of each element (role)</li>
+          <li>Text content and labels</li>
+          <li>Interactive elements (buttons, inputs, links)</li>
+          <li>Data structures (tables, lists)</li>
+          <li>Navigation and landmark regions</li>
+          <li>Form fields and their purposes</li>
+        </ul>
+      </div>
+      <div class="info-card card-no">
+        <h4>What the AI cannot see</h4>
+        <ul>
+          <li>Visual styling (colors, fonts, spacing)</li>
+          <li>Exact positioning (is the nav horizontal or vertical?)</li>
+          <li>Images (only alt text descriptions)</li>
+          <li>Custom components without semantic roles</li>
+          <li>Relative proportions (sidebar width, etc.)</li>
+          <li>CSS animations or visual state changes</li>
+          <li>Decorative or presentational elements</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Why filtering matters</h3>
+    <p>Real-world pages produce large accessibility trees with many redundant nodes — deeply nested <code>generic</code> containers, inline text fragments, decorative elements. Filtering removes this noise while preserving the semantic cues the AI relies on: roles, hierarchy, names, and values. The <strong>Visual</strong> view above renders this filtered tree as a wireframe, showing you exactly what the AI can reconstruct from the snapshot it receives.</p>
+  </div>
+</div>
+
+<div class="urlbar">
+  <label>URL:</label>
+  <input type="text" class="url-input" id="urlInput" placeholder="https://example.com" value="https://github.com">
+  <button class="btn btn-secondary" id="goBtn">Go</button>
+</div>
+
+<div class="evalbar" id="evalBar" style="display:none">
+  <label>JS:</label>
+  <textarea class="eval-input" id="evalInput" rows="1" placeholder="document.title"></textarea>
+</div>
+
+<div id="errorBanner" class="error-banner" style="display:none"></div>
+
+<div class="statsbar" id="statsbar" style="display:none">
+  <div class="stat">
+    <span class="stat-label">Raw:</span>
+    <span class="stat-value" id="statRaw">&mdash;</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Filtered:</span>
+    <span class="stat-value blue" id="statFiltered">&mdash;</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Saved:</span>
+    <span class="stat-value green" id="statSaved">&mdash;</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Nodes:</span>
+    <span class="stat-value" id="statNodes">&mdash;</span>
+  </div>
+  <div class="statsbar-toggles">
+    <div class="toggle-group" id="modeToggle">
+      <button class="mode-btn active" data-mode="code"><i class="mode-icon">&lt;/&gt;</i> Code</button>
+      <button class="mode-btn" data-mode="visual"><i class="mode-icon">&#9781;</i> Visual</button>
+    </div>
+    <div class="toggle-group">
+      <button class="filter-btn" data-level="light">Light</button>
+      <button class="filter-btn active" data-level="moderate">Moderate</button>
+      <button class="filter-btn" data-level="aggressive">Aggressive</button>
+    </div>
+  </div>
+</div>
+
+<div class="panels">
+  <div class="panel">
+    <div class="panel-header">
+      <span>Raw</span>
+      <span class="char-count" id="rawChars"></span>
+    </div>
+    <div class="panel-content" id="rawPanel">
+      <div class="empty"><div class="icon">&#9678;</div>Select a tab and click Capture</div>
+    </div>
+    <div class="panel-content visual hidden" id="rawVisualPanel"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <span>Filtered</span>
+      <span class="char-count" id="filteredChars"></span>
+    </div>
+    <div class="panel-content" id="filteredPanel">
+      <div class="empty"><div class="icon">&#10697;</div>Filtered output will appear here</div>
+    </div>
+    <div class="panel-content visual hidden" id="filteredVisualPanel"></div>
+  </div>
+</div>
+
+<script>
+const tabSelect = document.getElementById('tabSelect');
+const captureBtn = document.getElementById('captureBtn');
+const rawPanel = document.getElementById('rawPanel');
+const filteredPanel = document.getElementById('filteredPanel');
+const rawVisualPanel = document.getElementById('rawVisualPanel');
+const filteredVisualPanel = document.getElementById('filteredVisualPanel');
+const statsbar = document.getElementById('statsbar');
+const errorBanner = document.getElementById('errorBanner');
+
+let snapshotData = null;
+let evaluateData = null;
+let currentLevel = 'moderate';
+let viewMode = 'code'; // 'code' or 'visual'
+let appMode = 'snapshot'; // 'snapshot' or 'evaluate'
+
+// Load tabs
+async function loadTabs() {
+  try {
+    const res = await fetch('/api/tabs');
+    const data = await res.json();
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+    tabSelect.innerHTML = '';
+    if (data.length === 0) {
+      tabSelect.innerHTML = '<option value="">No tabs found</option>';
+      return;
+    }
+    for (const tab of data) {
+      const opt = document.createElement('option');
+      opt.value = tab.id;
+      const label = `${tab.title} — ${tab.url}`;
+      opt.textContent = label.length > 80 ? label.slice(0, 77) + '...' : label;
+      opt.title = label;
+      tabSelect.appendChild(opt);
+    }
+    captureBtn.disabled = false;
+    hideError();
+  } catch {
+    showError('Cannot connect to Chrome. Launch with: open -a "Google Chrome" --args --remote-debugging-port=9222');
+  }
+}
+
+// Capture snapshot
+async function capture() {
+  const tabId = tabSelect.value;
+  if (!tabId) return;
+
+  captureBtn.disabled = true;
+  document.body.classList.add('loading');
+  hideError();
+
+  try {
+    const res = await fetch('/api/snapshot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tabId }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+    snapshotData = data;
+    render();
+    statsbar.style.display = 'flex';
+  } catch (err) {
+    showError('Failed to capture snapshot: ' + err.message);
+  } finally {
+    captureBtn.disabled = false;
+    document.body.classList.remove('loading');
+  }
+}
+
+// Execute JS expression
+async function evaluate() {
+  const tabId = tabSelect.value;
+  const expression = document.getElementById('evalInput').value.trim();
+  if (!tabId || !expression) return;
+
+  const executeBtn = document.getElementById('executeBtn');
+  executeBtn.disabled = true;
+  document.body.classList.add('loading');
+  hideError();
+
+  try {
+    const res = await fetch('/api/evaluate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tabId, expression }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+    evaluateData = data;
+    render();
+    statsbar.style.display = 'flex';
+  } catch (err) {
+    showError('Failed to evaluate: ' + err.message);
+  } finally {
+    executeBtn.disabled = false;
+    document.body.classList.remove('loading');
+  }
+}
+
+// Parse indented snapshot text into a tree structure
+function parseSnapshotToTree(text) {
+  const lines = text.split('\n');
+  const root = { role: 'root', name: '', children: [], indent: -1, lineIndex: -1 };
+  const stack = [root];
+
+  function pushNode(node, indent) {
+    while (stack.length > 1 && stack[stack.length - 1].indent >= indent) stack.pop();
+    stack[stack.length - 1].children.push(node);
+    stack.push(node);
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+
+    const indent = line.search(/\S/);
+    const trimmed = line.trim();
+
+    if (/^##\s/.test(trimmed)) continue;
+
+    const ellipsisCollapsed = trimmed.match(/^\.\.\.\s*\[(.+)\]$/);
+    if (ellipsisCollapsed) {
+      pushNode({ role: 'collapsed', name: ellipsisCollapsed[1], children: [], indent, lineIndex: i }, indent);
+      continue;
+    }
+
+    const summaryCollapsed = trimmed.match(/^\[(\w+):\s*(.+)\]$/);
+    if (summaryCollapsed) {
+      pushNode({ role: 'collapsed', name: `${summaryCollapsed[1]}: ${summaryCollapsed[2]}`, children: [], indent, lineIndex: i }, indent);
+      continue;
+    }
+
+    const nodeMatch = trimmed.match(/^(?:uid=\S+\s+)?(\S+?)(?:\s+"([^"]*)")?(?:\s+(.*))?$/);
+    if (nodeMatch) {
+      const [, role, name, attrs] = nodeMatch;
+      const node = { role, name: name || '', value: '', children: [], indent, lineIndex: i };
+
+      if (role === 'heading' && attrs) {
+        const levelMatch = attrs.match(/level=(\d)/);
+        node.level = levelMatch ? levelMatch[1] : '2';
+      } else if (role === 'heading') {
+        node.level = '2';
+      }
+
+      if (attrs) {
+        const descMatch = attrs.match(/description="([^"]*)"/);
+        if (descMatch) node.description = descMatch[1];
+      }
+
+      pushNode(node, indent);
+      continue;
+    }
+  }
+
+  return root;
+}
+
+// Render a tree node into a DOM element
+function renderTreeNode(node) {
+  if (node.role === 'root') {
+    const container = document.createElement('div');
+    node.children.forEach(child => {
+      const rendered = renderTreeNode(child);
+      if (rendered) container.appendChild(rendered);
+    });
+    return container;
+  }
+
+  if (node.role === 'InlineTextBox') return null;
+  if (['log', 'Canvas', 'LabelText'].includes(node.role)) return null;
+
+  const el = document.createElement(getTagForRole(node.role));
+  const cssRole = node.role.replace(/[^a-zA-Z]/g, '');
+  el.className = `vis-${cssRole}`;
+  el.dataset.lineIndex = node.lineIndex;
+
+  const displayText = node.name || node.value || '';
+
+  switch (node.role) {
+    case 'RootWebArea':
+      if (node.name) {
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:11px;color:#484f58;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #21262d';
+        title.textContent = node.name;
+        el.appendChild(title);
+      }
+      break;
+    case 'heading':
+      el.setAttribute('data-level', node.level || '2');
+      el.textContent = displayText;
+      break;
+    case 'navigation':
+    case 'banner':
+      if (displayText) {
+        const label = document.createElement('span');
+        label.style.cssText = 'font-size:10px;text-transform:uppercase;color:#484f58;letter-spacing:0.5px';
+        label.textContent = displayText;
+        el.appendChild(label);
+      }
+      break;
+    case 'contentinfo': break;
+    case 'link': el.textContent = displayText || 'link'; break;
+    case 'button': el.textContent = displayText || 'button'; break;
+    case 'textbox':
+    case 'searchbox':
+      el.setAttribute('data-placeholder', displayText || 'text input');
+      break;
+    case 'combobox':
+    case 'spinbutton':
+      el.textContent = displayText || '';
+      break;
+    case 'checkbox':
+    case 'radio':
+      el.appendChild(document.createTextNode(' ' + displayText));
+      break;
+    case 'image': el.textContent = displayText || 'image'; break;
+    case 'collapsed': el.textContent = node.name; break;
+    case 'StaticText':
+      el.textContent = node.name || node.value;
+      if (!el.textContent) return null;
+      break;
+    case 'paragraph': break;
+    case 'separator': break;
+    case 'tab': el.textContent = displayText; break;
+    case 'cell':
+    case 'columnheader':
+    case 'gridcell':
+    case 'rowheader':
+      el.textContent = displayText;
+      break;
+    case 'region':
+      if (displayText) {
+        const regionLabel = document.createElement('span');
+        regionLabel.style.cssText = 'font-size:10px;color:#484f58;text-transform:uppercase';
+        regionLabel.textContent = displayText;
+        el.appendChild(regionLabel);
+      }
+      break;
+    case 'dialog': break;
+    case 'generic':
+      if (displayText && node.children.length === 0) el.textContent = displayText;
+      break;
+    default:
+      if (displayText && node.children.length === 0) el.textContent = displayText;
+      break;
+  }
+
+  node.children.forEach(child => {
+    const rendered = renderTreeNode(child);
+    if (rendered) el.appendChild(rendered);
+  });
+
+  el.addEventListener('mouseenter', (e) => {
+    e.stopPropagation();
+    el.classList.add('vis-node-highlight');
+  });
+  el.addEventListener('mouseleave', (e) => {
+    e.stopPropagation();
+    el.classList.remove('vis-node-highlight');
+  });
+
+  return el;
+}
+
+function getTagForRole(role) {
+  switch (role) {
+    case 'list': return 'ul';
+    case 'listitem': return 'li';
+    default: return 'div';
+  }
+}
+
+// Toggle panel visibility based on view mode
+function applyViewMode() {
+  const isVisual = viewMode === 'visual';
+  rawPanel.classList.toggle('hidden', isVisual);
+  rawVisualPanel.classList.toggle('hidden', !isVisual);
+  filteredPanel.classList.toggle('hidden', isVisual);
+  filteredVisualPanel.classList.toggle('hidden', !isVisual);
+}
+
+// Render panels
+function render() {
+  if (appMode === 'evaluate') {
+    renderEvaluate();
+  } else {
+    renderSnapshot();
+  }
+}
+
+function renderSnapshot() {
+  if (!snapshotData) return;
+
+  const raw = snapshotData.raw;
+  const filtered = snapshotData.filtered[currentLevel];
+  const rawLines = raw.text.split('\n');
+  const filteredLines = filtered.text.split('\n');
+
+  const filteredSet = new Set(filteredLines.map(l => l.trim()));
+
+  rawPanel.innerHTML = rawLines.map(line => {
+    const trimmed = line.trim();
+    const isRemoved = trimmed && !filteredSet.has(trimmed);
+    return `<div class="line${isRemoved ? ' removed' : ''}">${highlightLine(escapeHtml(line))}</div>`;
+  }).join('');
+
+  filteredPanel.innerHTML = filteredLines.map(line => {
+    const isCollapsed = line.includes('[') && (line.includes('collapsed]') || line.includes('truncated') || line.includes('Filtered out'));
+    return `<div class="line${isCollapsed ? ' collapsed' : ''}">${highlightLine(escapeHtml(line))}</div>`;
+  }).join('');
+
+  // Render both visual wireframes
+  const rawTree = parseSnapshotToTree(raw.text);
+  rawVisualPanel.innerHTML = '';
+  rawVisualPanel.appendChild(renderTreeNode(rawTree));
+
+  const filteredTree = parseSnapshotToTree(filtered.text);
+  filteredVisualPanel.innerHTML = '';
+  filteredVisualPanel.appendChild(renderTreeNode(filteredTree));
+
+  applyViewMode();
+
+  // Sync scrolling — works for whichever pair is visible
+  rawPanel.onscroll = () => { filteredPanel.scrollTop = rawPanel.scrollTop; };
+  filteredPanel.onscroll = () => { rawPanel.scrollTop = filteredPanel.scrollTop; };
+  rawVisualPanel.onscroll = () => { filteredVisualPanel.scrollTop = rawVisualPanel.scrollTop; };
+  filteredVisualPanel.onscroll = () => { rawVisualPanel.scrollTop = filteredVisualPanel.scrollTop; };
+
+  const saved = raw.chars - filtered.chars;
+  const pct = ((saved / raw.chars) * 100).toFixed(1);
+  document.getElementById('statRaw').textContent = formatBytes(raw.chars);
+  document.getElementById('statFiltered').textContent = formatBytes(filtered.chars);
+  document.getElementById('statSaved').textContent = `${formatBytes(saved)} (${pct}%)`;
+  document.getElementById('statNodes').textContent = raw.nodes;
+  document.getElementById('rawChars').textContent = `${raw.chars.toLocaleString()} chars`;
+  document.getElementById('filteredChars').textContent = `${filtered.chars.toLocaleString()} chars`;
+}
+
+function renderEvaluate() {
+  if (!evaluateData) return;
+
+  const raw = evaluateData.raw;
+  const filtered = evaluateData.filtered[currentLevel];
+
+  // Always code view for evaluate — hide visual panels
+  rawVisualPanel.classList.add('hidden');
+  filteredVisualPanel.classList.add('hidden');
+  rawPanel.classList.remove('hidden');
+  filteredPanel.classList.remove('hidden');
+
+  rawPanel.innerHTML = escapeHtml(raw.text).split('\n').map(line =>
+    `<div class="line">${line}</div>`
+  ).join('');
+
+  filteredPanel.innerHTML = filtered.text.split('\n').map(line => {
+    const isNote = line.includes('[cdp-filter-proxy:');
+    return `<div class="line${isNote ? ' collapsed' : ''}">${escapeHtml(line)}</div>`;
+  }).join('');
+
+  // Sync scrolling
+  rawPanel.onscroll = () => { filteredPanel.scrollTop = rawPanel.scrollTop; };
+  filteredPanel.onscroll = () => { rawPanel.scrollTop = filteredPanel.scrollTop; };
+
+  const saved = raw.chars - filtered.chars;
+  const pct = raw.chars > 0 ? ((saved / raw.chars) * 100).toFixed(1) : '0.0';
+  document.getElementById('statRaw').textContent = formatBytes(raw.chars);
+  document.getElementById('statFiltered').textContent = formatBytes(filtered.chars);
+  document.getElementById('statSaved').textContent = `${formatBytes(saved)} (${pct}%)`;
+  document.getElementById('statNodes').textContent = '—';
+  document.getElementById('rawChars').textContent = `${raw.chars.toLocaleString()} chars`;
+  document.getElementById('filteredChars').textContent = `${filtered.chars.toLocaleString()} chars`;
+}
+
+function highlightLine(line) {
+  return line
+    .replace(/^(## .+)$/, '<span class="section-header">$1</span>')
+    .replace(/(uid=\S+)/g, '<span class="uid">$1</span>')
+    .replace(/ ([A-Z][a-zA-Z]+|[a-z]+(?:group|header|info)?) /g, ' <span class="role">$1</span> ')
+    .replace(/(&quot;[^&]*&quot;|"[^"]*")/g, '<span class="name">$1</span>')
+    .replace(/(\[.*?collapsed\]|\[.*?truncated.*?\]|\[Filtered out.*?\])/g, '<span class="filter-note">$1</span>');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  const kb = bytes / 1024;
+  return kb < 1024 ? kb.toFixed(1) + ' KB' : (kb / 1024).toFixed(1) + ' MB';
+}
+
+function showError(msg) {
+  errorBanner.textContent = msg;
+  errorBanner.style.display = 'block';
+}
+
+function hideError() {
+  errorBanner.style.display = 'none';
+}
+
+// Filter level toggle
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLevel = btn.dataset.level;
+    render();
+  });
+});
+
+// View mode toggle (Code / Visual)
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    viewMode = btn.dataset.mode;
+    applyViewMode();
+  });
+});
+
+// App mode toggle (Snapshot / Evaluate)
+function applyAppMode() {
+  const urlBar = document.querySelector('.urlbar');
+  const evalBar = document.getElementById('evalBar');
+  const executeBtn = document.getElementById('executeBtn');
+  const modeToggle = document.getElementById('modeToggle');
+
+  if (appMode === 'evaluate') {
+    urlBar.style.display = 'none';
+    evalBar.style.display = 'flex';
+    captureBtn.style.display = 'none';
+    executeBtn.style.display = '';
+    executeBtn.disabled = !tabSelect.value;
+    modeToggle.style.display = 'none'; // hide Code/Visual toggle
+  } else {
+    urlBar.style.display = 'flex';
+    evalBar.style.display = 'none';
+    captureBtn.style.display = '';
+    executeBtn.style.display = 'none';
+    modeToggle.style.display = 'flex';
+  }
+}
+
+document.querySelectorAll('#appModeToggle .topbar-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#appModeToggle .topbar-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    appMode = btn.dataset.appmode;
+    applyAppMode();
+    render();
+  });
+});
+
+// Navigate to URL
+const urlInput = document.getElementById('urlInput');
+const goBtn = document.getElementById('goBtn');
+
+async function navigateTo() {
+  const url = urlInput.value.trim();
+  if (!url) return;
+  const tabId = tabSelect.value;
+  if (!tabId) return;
+
+  goBtn.disabled = true;
+  goBtn.textContent = '...';
+  hideError();
+
+  try {
+    const res = await fetch('/api/navigate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tabId, url }),
+    });
+    const data = await res.json();
+    if (data.error) { showError(data.error); return; }
+    await loadTabs();
+  } catch (err) {
+    showError('Navigation failed: ' + err.message);
+  } finally {
+    goBtn.disabled = false;
+    goBtn.textContent = 'Go';
+  }
+}
+
+// Info panel toggle
+const infoBtn = document.getElementById('infoBtn');
+const infoPanel = document.getElementById('infoPanel');
+infoBtn.addEventListener('click', () => {
+  infoPanel.classList.toggle('open');
+  infoBtn.classList.toggle('active');
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadTabs);
+goBtn.addEventListener('click', navigateTo);
+urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') navigateTo(); });
+captureBtn.addEventListener('click', capture);
+document.getElementById('executeBtn').addEventListener('click', evaluate);
+document.getElementById('evalInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); evaluate(); }
+});
+tabSelect.addEventListener('change', () => {
+  document.getElementById('executeBtn').disabled = !tabSelect.value;
+});
+loadTabs();
+</script>
+</body>
+</html>
